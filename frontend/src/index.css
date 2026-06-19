@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f0f4ff;
+  min-height: 100vh;
+}
+
+.hindi-text {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Input focus ring */
+.input-field {
+  @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white/80
+    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+    transition-all duration-200 text-gray-700 placeholder-gray-400;
+}
+
+.label {
+  @apply block text-sm font-semibold text-gray-600 mb-1.5;
+}
+
+/* Animate fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.3s ease-out; }
+
+/* Status badge */
+.badge-active {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+    bg-emerald-100 text-emerald-700;
+}
+.badge-closed {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+    bg-gray-100 text-gray-500;
+}
+
+/* Table */
+.table-row-hover {
+  @apply hover:bg-primary-50 transition-colors duration-150 cursor-pointer;
+}
