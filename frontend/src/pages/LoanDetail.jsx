@@ -1,10 +1,10 @@
-try thimport React, { useEffect, useState, useMemo, useRef } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getLoan, getCustomer, addTranche, addPayment, updateInterestRate, closeLoan, deleteLoan, photoUrl } from '../utils/api'
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters'
 import ConfirmModal from '../components/ConfirmModal'
 import toast from 'react-hot-toast'
-import { FiArrowLeft, FiCheckCircle, FiEdit2, FiTrash2, FiUser, FiInfo, FiList, FiDownload, FiPrinter, FiPhone, FiMapPin } from 'react-icons/fi'
+import { FiArrowLeft, FiCheckCircle, FiEdit2, FiTrash2, FiUser, FiInfo, FiList, FiDownload, FiPrinter, FiPhone, FiMapPin, FiShoppingBag } from 'react-icons/fi'
 import { GiReceiveMoney, GiPayMoney } from 'react-icons/gi'
 
 // ─── Helper: today's date as YYYY-MM-DD ────────────────────────────────────────
@@ -195,9 +195,12 @@ export default function LoanDetail() {
     const amount = parseFloat(trancheForm.amount)
     if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return }
     try {
+      // Convert date string (YYYY-MM-DD) to ISO datetime without timezone issues
+      const [year, month, day] = trancheForm.date.split('-')
+      const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month)-1, parseInt(day)))
       await addTranche(id, {
         amount,
-        disbursal_date: new Date(trancheForm.date).toISOString(),
+        disbursal_date: utcDate.toISOString(),
         notes: trancheForm.notes,
       })
       toast.success('Tranche added')
@@ -219,9 +222,12 @@ export default function LoanDetail() {
     else if (paymentForm.mode === 'custom')  interest_override = parseFloat(paymentForm.customInterest) || 0
 
     try {
+      // Convert date string (YYYY-MM-DD) to ISO datetime without timezone issues
+      const [year, month, day] = paymentForm.date.split('-')
+      const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month)-1, parseInt(day)))
       await addPayment(id, {
         amount,
-        payment_date: new Date(paymentForm.date).toISOString(),
+        payment_date: utcDate.toISOString(),
         notes: paymentForm.notes,
         interest_override,
       })
@@ -400,6 +406,12 @@ export default function LoanDetail() {
             <FiList size={13} /> Ledger
           </button>
           <button
+            onClick={() => navigate(`/loans/${id}/sell-collateral`)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border-2 border-amber-500 text-amber-600 hover:bg-amber-50 transition"
+          >
+            <FiShoppingBag size={13} /> Sell
+          </button>
+          <button
             onClick={() => setShowDelete(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border-2 border-red-400 text-red-500 hover:bg-red-50 transition"
           >
@@ -427,7 +439,11 @@ export default function LoanDetail() {
         </div>
 
         {/* Interest Due */}
-        <div className="glass-card rounded-2xl p-4">
+        <div
+          role="button"
+          onClick={() => setShowLedger(true)}
+          className="glass-card rounded-2xl p-4 cursor-pointer hover:shadow-lg"
+        >
           <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Interest Due</div>
           <div className="hindi-text text-xs text-gray-400 mb-2">ब्याज देय</div>
           <div className="text-xl font-bold text-amber-600">{formatCurrency(loan.interest_balance)}</div>
@@ -491,10 +507,24 @@ export default function LoanDetail() {
       )}
 
       {/* ── COLLATERAL ──────────────────────────────────────────────────── */}
-      {loan.collateral_description && (
-        <div className="glass-card rounded-2xl p-4">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Collateral / जमानत</div>
-          <p className="text-gray-700 text-sm">{loan.collateral_description}</p>
+      {(loan.collateral_description || loan.collateral_description_hi || loan.collateral_photo_path) && (
+        <div className="glass-card rounded-2xl p-4 space-y-3">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Collateral / जमानत</div>
+          {loan.collateral_description && (
+            <p className="text-gray-700 text-sm">{loan.collateral_description}</p>
+          )}
+          {loan.collateral_description_hi && (
+            <p className="hindi-text text-gray-700 text-sm">{loan.collateral_description_hi}</p>
+          )}
+          {loan.collateral_metal_type && (
+            <div className="text-xs text-gray-600 mt-2">
+              <span className="font-semibold">{loan.collateral_metal_type === 'gold' ? '🟡 Gold' : '🪙 Silver'}</span>
+              {loan.collateral_metal_weight && <span> • {loan.collateral_metal_weight}g</span>}
+            </div>
+          )}
+          {loan.collateral_photo_path && (
+            <img src={photoUrl(loan.collateral_photo_path)} alt="Collateral" className="w-full h-40 object-cover rounded-lg mt-2" />
+          )}
         </div>
       )}
 
@@ -545,22 +575,39 @@ export default function LoanDetail() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loan.payments.map((p, i) => (
-                  <tr key={p.id || i} className="hover:bg-emerald-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.payment_date)}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{formatCurrency(p.amount)}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {p.interest_override === null || p.interest_override === undefined ? (
-                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Auto</span>
-                      ) : p.interest_override === 0 ? (
-                        <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">Interest Waived</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium">
-                          Custom ₹{p.interest_override}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{p.notes || '—'}</td>
-                  </tr>
+                  <React.Fragment key={p.id || i}>
+                    <tr className="hover:bg-emerald-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.payment_date)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{formatCurrency(p.amount)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {p.interest_override === null || p.interest_override === undefined ? (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Auto</span>
+                        ) : p.interest_override === 0 ? (
+                          <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">Interest Waived</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium">
+                            Custom ₹{p.interest_override}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{p.notes || '—'}</td>
+                    </tr>
+                    {p.notes && p.notes.includes('Collateral sale proceeds') && (
+                      <tr>
+                        <td className="px-4 py-3" colSpan={4}>
+                          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <div className="font-semibold text-amber-800">Collateral sale recorded</div>
+                            <div className="text-sm text-gray-600 mt-2">{p.notes}</div>
+                            {loan.collateral_photo_path && (
+                              <div className="mt-3 rounded overflow-hidden border">
+                                <img src={photoUrl(loan.collateral_photo_path)} alt="Collateral sale" className="w-full h-40 object-cover" />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -722,10 +769,17 @@ export default function LoanDetail() {
                   </tbody>
                 </table>
               </div>
-              {loan.collateral_description && (
+              {(loan.collateral_description || loan.collateral_description_hi) && (
                 <div className="card">
                   <div className="card-label">Collateral / जमानत</div>
-                  <div style={{marginTop:4, fontWeight:500}}>{loan.collateral_description}</div>
+                  {loan.collateral_description && <div style={{marginTop:4, fontWeight:500}}>{loan.collateral_description}</div>}
+                  {loan.collateral_description_hi && <div style={{marginTop:4, fontWeight:500, fontFamily:'sans-serif'}}>{loan.collateral_description_hi}</div>}
+                  {loan.collateral_metal_type && (
+                    <div style={{marginTop:4, fontSize:'0.875rem', color:'#64748b'}}>
+                      {loan.collateral_metal_type === 'gold' ? '🟡 Gold' : '🪙 Silver'}
+                      {loan.collateral_metal_weight && ` • ${loan.collateral_metal_weight}g`}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1106,36 +1160,60 @@ export default function LoanDetail() {
       {/* ── 4. Ledger ───────────────────────────────────────────────────── */}
       {showLedger && (
         <Modal title="Transaction Ledger" titleHi="लेनदेन विवरण" onClose={() => setShowLedger(false)} wide>
-          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-            {loan.ledger && loan.ledger.length > 0 ? (
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-white shadow-sm">
-                  <tr className="text-gray-500 uppercase font-semibold border-b-2 border-gray-200">
-                    <th className="px-4 py-2 text-left">Date</th>
-                    <th className="px-4 py-2 text-left">Type</th>
-                    <th className="px-4 py-2 text-right">Amount</th>
-                    <th className="px-4 py-2 text-right">Principal Bal.</th>
-                    <th className="px-4 py-2 text-right">Interest Due</th>
-                    <th className="px-4 py-2 text-left">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loan.ledger.map((entry, i) => (
-                    <LedgerRow key={i} entry={{ ...entry, entry_type: entry.type, entry_date: entry.date }} />
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t-2 border-gray-300 font-bold">
-                  <tr>
-                    <td colSpan={3} className="px-4 py-3 text-sm text-gray-700">Current Balance</td>
-                    <td className="px-4 py-3 text-right text-primary-700">{formatCurrency(loan.principal_balance)}</td>
-                    <td className="px-4 py-3 text-right text-amber-600">{formatCurrency(loan.interest_balance)}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            ) : (
-              <div className="text-center py-12 text-gray-400">No ledger entries yet</div>
-            )}
+          <div className="space-y-4">
+            {/* Per-tranche gross interest summary (informational - may not reflect payments/waivers) */}
+            <div className="bg-gray-50 p-4 rounded-lg text-sm">
+              <div className="font-semibold mb-2">Per-tranche interest (gross)</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {loan.tranches && loan.tranches.map((t) => {
+                  const d0 = new Date(t.disbursal_date)
+                  const now = new Date()
+                  const days = Math.max(Math.floor((now - d0) / (1000 * 60 * 60 * 24)), 0)
+                  const months = days / 30.0
+                  const gross = Math.round((t.amount * (loan.interest_rate / 100) * months) * 100) / 100
+                  return (
+                    <div key={t.id} className="p-2 bg-white rounded shadow-sm">
+                      <div className="text-xs text-gray-500">Disbursal: {formatDate(t.disbursal_date)}</div>
+                      <div className="font-medium">{formatCurrency(t.amount)}</div>
+                      <div className="text-xs text-gray-600">{Math.floor(months)} month(s) · {days} day(s)</div>
+                      <div className="text-sm text-amber-600 font-semibold">Gross interest: {formatCurrency(gross)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">Note: This shows gross interest per tranche since disbursal (ignores payments/waivers). Actual outstanding interest is shown in the ledger below.</div>
+            </div>
+            <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+              {loan.ledger && loan.ledger.length > 0 ? (
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-white shadow-sm">
+                    <tr className="text-gray-500 uppercase font-semibold border-b-2 border-gray-200">
+                      <th className="px-4 py-2 text-left">Date</th>
+                      <th className="px-4 py-2 text-left">Type</th>
+                      <th className="px-4 py-2 text-right">Amount</th>
+                      <th className="px-4 py-2 text-right">Principal Bal.</th>
+                      <th className="px-4 py-2 text-right">Interest Due</th>
+                      <th className="px-4 py-2 text-left">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {loan.ledger.map((entry, i) => (
+                      <LedgerRow key={i} entry={{ ...entry, entry_type: entry.type, entry_date: entry.date }} />
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 border-t-2 border-gray-300 font-bold">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 text-sm text-gray-700">Current Balance</td>
+                      <td className="px-4 py-3 text-right text-primary-700">{formatCurrency(loan.principal_balance)}</td>
+                      <td className="px-4 py-3 text-right text-amber-600">{formatCurrency(loan.interest_balance)}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              ) : (
+                <div className="text-center py-12 text-gray-400">No ledger entries yet</div>
+              )}
+            </div>
           </div>
         </Modal>
       )}

@@ -39,7 +39,8 @@ export default function ClosedLoans() {
       l.loan_number.toLowerCase().includes(q) ||
       name.includes(q) ||
       (cust?.customer_id || '').toLowerCase().includes(q) ||
-      (l.collateral_description || '').toLowerCase().includes(q)
+      (l.collateral_description || '').toLowerCase().includes(q) ||
+      (l.collateral_description_hi || '').toLowerCase().includes(q)
     )
   })
 
@@ -164,8 +165,13 @@ export default function ClosedLoans() {
                             </div>
                           ) : <span className="text-gray-400 text-sm">—</span>}
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500 max-w-xs truncate">
-                          {loan.collateral_description || '—'}
+                        <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500 max-w-xs">
+                          {loan.collateral_description || loan.collateral_description_hi ? (
+                            <div className="space-y-1">
+                              {loan.collateral_description && <div className="truncate">{loan.collateral_description}</div>}
+                              {loan.collateral_description_hi && <div className="hindi-text text-[11px] text-gray-400 truncate">{loan.collateral_description_hi}</div>}
+                            </div>
+                          ) : '—'}
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                           {formatCurrency(loan.total_principal)}

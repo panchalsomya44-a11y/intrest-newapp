@@ -94,9 +94,9 @@ export default function HindiInput({
           )}
         </button>
       </div>
-      <p className="text-xs text-orange-500 mt-1 leading-relaxed">
-        ✦ Is field mein English type karo, phir <strong>अ↓A</strong> dabao
-        <span className="hindi-text ml-1 text-gray-400">| यहाँ अंग्रेजी टाइप करें और बटन दबाएं</span>
+      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+        <span className="hindi-text">हिंदी में सीधे टाइप करें या अंग्रेजी लिखकर अ↓A बटन दबाएं</span>
+        <span className="ml-1 block text-gray-400 italic">Type Hindi directly or English → convert button</span>
       </p>
     </div>
   )

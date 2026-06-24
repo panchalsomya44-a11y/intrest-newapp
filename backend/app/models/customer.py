@@ -33,6 +33,7 @@ class Customer(Base):
     address_hi = Column(Text)
 
     photo_path = Column(String(300))
+    scanned_document_path = Column(String(300))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

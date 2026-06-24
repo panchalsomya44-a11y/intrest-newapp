@@ -30,6 +30,7 @@ class CustomerOut(CustomerBase):
     id: int
     customer_id: str
     photo_path: Optional[str] = None
+    scanned_document_path: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

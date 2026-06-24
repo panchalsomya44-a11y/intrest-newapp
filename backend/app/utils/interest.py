@@ -91,6 +91,9 @@ def calc_running_balance(tranches, payments, interest_rate: float, upto: datetim
         if principal_balance <= 0:
             return 0.0
         days = max((to_dt - from_dt).days, 0)
+        # If same-day or within same 24 hours, count as 1 day of interest
+        if days == 0 and to_dt > from_dt:
+            days = 1
         months = days / 30.0
         accrued = round(principal_balance * (interest_rate / 100) * months, 2)
         interest_balance = round(interest_balance + accrued, 2)
@@ -145,10 +148,11 @@ def calc_running_balance(tranches, payments, interest_rate: float, upto: datetim
             interest_cleared = round(max(interest_cleared, 0), 2)
             paid_remaining   = round(paid - interest_cleared, 2)
 
-            # --- KEY FIX: if negotiated, zero out ALL remaining accrued interest (waived) ---
+            # Negotiated payments: clear the agreed interest amount and waive any remaining accrued interest.
+            # Full waive (interest_override=0) or partial custom waive should remove the rest of accrued interest.
             if is_negotiated:
                 interest_waived  = round(max(interest_balance - interest_cleared, 0), 2)
-                interest_balance = 0.0  # waived portion is gone — never carries forward
+                interest_balance = 0.0
             else:
                 interest_waived  = 0.0
                 interest_balance = round(interest_balance - interest_cleared, 2)
@@ -186,7 +190,12 @@ def calc_running_balance(tranches, payments, interest_rate: float, upto: datetim
         last_date = ev_date
 
     # Accrue interest from last event up to 'upto' (today)
-    if last_date is not None and upto > last_date:
+    # BUT: If last event is TODAY (same calendar day), don't accrue intra-day interest
+    # (prevents showing new interest minutes/hours after a payment on the same day)
+    last_date_only = last_date.date() if last_date else None
+    upto_date_only = upto.date()
+    
+    if last_date is not None and upto > last_date and last_date_only != upto_date_only:
         accrued = accrue_interest(last_date, upto)
         if accrued > 0:
             ledger.append({

@@ -13,6 +13,9 @@ class Loan(Base):
     # Collateral / security
     collateral_description = Column(Text)
     collateral_description_hi = Column(Text)
+    collateral_metal_type = Column(String(20))
+    collateral_metal_weight = Column(Float)
+    collateral_photo_path = Column(String(300))
 
     interest_rate = Column(Float, default=3.0)   # % per month, adjustable per loan
     is_active = Column(Boolean, default=True)

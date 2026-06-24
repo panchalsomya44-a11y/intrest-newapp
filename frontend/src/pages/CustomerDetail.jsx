@@ -66,6 +66,12 @@ export default function CustomerDetail() {
                 <FiEye size={11} /> View Full
               </button>
             )}
+            {customer.scanned_document_path && (
+              <div className="text-center text-xs text-gray-500 mt-2">
+                Scanned Document Photo
+                <span className="hindi-text block">स्कैन किया दस्तावेज़</span>
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -117,6 +123,20 @@ export default function CustomerDetail() {
           </div>
         </div>
       </div>
+
+      {customer.scanned_document_path && (
+        <div className="glass-card rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-gray-700">Scanned Document</h3>
+              <p className="hindi-text text-sm text-gray-500">स्कैन किया दस्तावेज़</p>
+            </div>
+          </div>
+          <div className="rounded-3xl overflow-hidden border border-gray-200 shadow-sm">
+            <img src={photoUrl(customer.scanned_document_path)} alt="Scanned document" className="w-full h-auto object-contain bg-gray-50" />
+          </div>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-4">
@@ -170,8 +190,11 @@ export default function CustomerDetail() {
                     <div className="text-xs text-gray-500 mt-0.5">
                       {formatDate(loan.created_at)} · {loan.interest_rate}%/month · {loan.tranches?.length || 0} tranche(s)
                     </div>
-                    {loan.collateral_description && (
-                      <div className="text-xs text-gray-400 mt-0.5">📦 {loan.collateral_description}</div>
+                    {(loan.collateral_description || loan.collateral_description_hi) && (
+                      <div className="space-y-1 text-xs text-gray-400 mt-0.5">
+                        {loan.collateral_description && <div>📦 {loan.collateral_description}</div>}
+                        {loan.collateral_description_hi && <div className="hindi-text">📦 {loan.collateral_description_hi}</div>}
+                      </div>
                     )}
                   </div>
                 </div>

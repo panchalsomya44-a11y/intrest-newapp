@@ -25,8 +25,13 @@ function LoanRow({ loan, customer, onView }) {
           </div>
         ) : <span className="text-gray-400 text-sm">—</span>}
       </td>
-      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500 max-w-32 truncate">
-        {loan.collateral_description || '—'}
+      <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500 max-w-32">
+        {loan.collateral_description || loan.collateral_description_hi ? (
+          <div className="space-y-1">
+            {loan.collateral_description && <div className="truncate">{loan.collateral_description}</div>}
+            {loan.collateral_description_hi && <div className="hindi-text text-[11px] text-gray-400 truncate">{loan.collateral_description_hi}</div>}
+          </div>
+        ) : '—'}
       </td>
       <td className="px-4 py-3 text-right text-sm font-medium text-gray-700">
         {formatCurrency(loan.total_principal)}
@@ -108,7 +113,8 @@ export default function LoanList() {
       const name = cust ? `${cust.first_name} ${cust.last_name}`.toLowerCase() : ''
       return l.loan_number.toLowerCase().includes(lq) || name.includes(lq) ||
              (cust?.customer_id || '').toLowerCase().includes(lq) ||
-             (l.collateral_description || '').toLowerCase().includes(lq)
+             (l.collateral_description || '').toLowerCase().includes(lq) ||
+             (l.collateral_description_hi || '').toLowerCase().includes(lq)
     })
   })()
 

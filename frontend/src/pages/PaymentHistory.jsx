@@ -39,6 +39,7 @@ export default function PaymentHistory() {
             loan_number:   loan.loan_number,
             customer_id:   loan.customer_id,
             collateral:    loan.collateral_description,
+        collateral_hi: loan.collateral_description_hi,
             loan_active:   loan.is_active,
             interest_rate: loan.interest_rate,
             interest_override: p.interest_override,
@@ -57,6 +58,7 @@ export default function PaymentHistory() {
             loan_number: loan.loan_number,
             customer_id: loan.customer_id,
             collateral:  loan.collateral_description,
+        collateral_hi: loan.collateral_description_hi,
             loan_active: loan.is_active,
             interest_rate: loan.interest_rate,
             notes:       t.notes,
@@ -93,8 +95,11 @@ export default function PaymentHistory() {
       const phone  = (cust?.phone || '').toLowerCase()
       const lnum   = ev.loan_number.toLowerCase()
       const amt    = String(ev.amount)
+      const collateral = (ev.collateral || '').toLowerCase()
+      const collateralHi = (ev.collateral_hi || '').toLowerCase()
       if (!name.includes(q) && !nameHi.includes(q) && !custId.includes(q) &&
-          !phone.includes(q) && !lnum.includes(q) && !amt.includes(q)) return false
+          !phone.includes(q) && !lnum.includes(q) && !amt.includes(q) &&
+          !collateral.includes(q) && !collateralHi.includes(q)) return false
     }
     return true
   })
@@ -145,7 +150,7 @@ export default function PaymentHistory() {
           <td>${new Date(ev.event_date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</td>
           <td><span class="${isD ? 'badge-given' : 'badge-recd'}">${isD ? '↑ Given' : '↓ Received'}</span></td>
           <td><strong>${name}</strong>${nameHi ? `<br/><span class="hi">${nameHi}</span>` : ''}<br/><span class="mono">${custId}</span>${phone ? ` · ${phone}` : ''}${village ? ` · ${village}` : ''}</td>
-          <td class="mono">${ev.loan_number}<br/><span class="sm">${ev.collateral || ''}</span></td>
+          <td class="mono">${ev.loan_number}<br/><span class="sm">${ev.collateral || ''}${ev.collateral_hi ? `<br/><span class="hi">${ev.collateral_hi}</span>` : ''}</span></td>
           <td class="${isD ? 'amt-given' : 'amt-recd'}">${isD ? '+' : '−'}${formatCurrency(ev.amount)}</td>
           <td>${mode}</td>
           <td class="sm">${ev.notes || '—'}</td>
@@ -432,6 +437,7 @@ export default function PaymentHistory() {
                             {cust?.phone && <span>📞 {cust.phone}</span>}
                             {cust?.village && <span>📍 {cust.village}</span>}
                             {ev.collateral && <span>📦 {ev.collateral}</span>}
+                            {ev.collateral_hi && <span className="hindi-text">📦 {ev.collateral_hi}</span>}
                           </div>
 
                           {ev.notes && (

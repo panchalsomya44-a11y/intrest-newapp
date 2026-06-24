@@ -40,6 +40,9 @@ class LoanCreate(BaseModel):
     customer_id: int
     collateral_description: Optional[str] = None
     collateral_description_hi: Optional[str] = None
+    collateral_metal_type: Optional[str] = None
+    collateral_metal_weight: Optional[float] = None
+    collateral_photo_path: Optional[str] = None
     interest_rate: Optional[float] = 3.0
     notes: Optional[str] = None
     first_tranche_amount: float
@@ -63,6 +66,9 @@ class LoanOut(BaseModel):
     customer_id: int
     collateral_description: Optional[str] = None
     collateral_description_hi: Optional[str] = None
+    collateral_metal_type: Optional[str] = None
+    collateral_metal_weight: Optional[float] = None
+    collateral_photo_path: Optional[str] = None
     interest_rate: float
     is_active: bool
     created_at: datetime

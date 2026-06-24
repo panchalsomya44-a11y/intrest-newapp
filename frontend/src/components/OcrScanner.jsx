@@ -18,6 +18,15 @@ import toast from 'react-hot-toast'
  *   onExtracted(fields) — called when user clicks "Apply to Form"
  *   onClose()
  */
+async function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function OcrScanner({ onExtracted, onClose }) {
   const [step, setStep]       = useState('choose')  // choose | camera | preview | scanning | result
   const [imgSrc, setImgSrc]   = useState(null)
@@ -31,29 +40,26 @@ export default function OcrScanner({ onExtracted, onClose }) {
   const fileRef   = useRef()
 
   // ── File upload ────────────────────────────────────────────────────────
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    const dataUrl = await fileToDataUrl(file)
     setImgFile(file)
-    setImgSrc(URL.createObjectURL(file))
+    setImgSrc(dataUrl)
     setStep('preview')
     setError(null)
   }
 
   // ── Webcam capture ─────────────────────────────────────────────────────
-  const handleCapture = useCallback(() => {
+  const handleCapture = useCallback(async () => {
     const dataUrl = webcamRef.current?.getScreenshot()
     if (!dataUrl) return
-    // Convert base64 to File
-    fetch(dataUrl)
-      .then(r => r.blob())
-      .then(blob => {
-        const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' })
-        setImgFile(file)
-        setImgSrc(dataUrl)
-        setStep('preview')
-        setError(null)
-      })
+    const blob = await fetch(dataUrl).then(r => r.blob())
+    const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' })
+    setImgFile(file)
+    setImgSrc(dataUrl)
+    setStep('preview')
+    setError(null)
   }, [webcamRef])
 
   // ── Run OCR via backend ────────────────────────────────────────────────

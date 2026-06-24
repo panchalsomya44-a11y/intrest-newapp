@@ -37,7 +37,7 @@ export default function CustomerForm() {
   const [customId, setCustomId] = useState('')   // user-defined customer ID
   const [photoFile, setPhotoFile] = useState(null)
   const [photoBase64, setPhotoBase64] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState(null)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null)
   const [showWebcam, setShowWebcam] = useState(false)
   const [showOcr, setShowOcr]           = useState(false)
   const [scannedDocPhoto, setScannedDocPhoto] = useState(null)
@@ -57,7 +57,8 @@ export default function CustomerForm() {
           relation_name_hi: c.relation_name_hi || '', caste_hi: c.caste_hi || '',
           village_hi: c.village_hi || '', address_hi: c.address_hi || '',
         })
-        if (c.photo_path) setPreviewUrl(photoUrl(c.photo_path))
+        if (c.photo_path) setPhotoPreviewUrl(photoUrl(c.photo_path))
+        if (c.scanned_document_path) setScannedDocPhoto(photoUrl(c.scanned_document_path))
         setLoading(false)
       })
     }
@@ -70,13 +71,13 @@ export default function CustomerForm() {
     if (!file) return
     setPhotoFile(file)
     setPhotoBase64(null)
-    setPreviewUrl(URL.createObjectURL(file))
+    setPhotoPreviewUrl(URL.createObjectURL(file))
   }
 
   const handleWebcamCapture = (base64) => {
     setPhotoBase64(base64)
     setPhotoFile(null)
-    setPreviewUrl(base64)
+    setPhotoPreviewUrl(base64)
   }
 
   const handleSubmit = async (e) => {
@@ -88,7 +89,7 @@ export default function CustomerForm() {
     // 2. Hindi name (first + last)
     const hasHindi   = form.first_name_hi.trim() && form.last_name_hi.trim()
     // 3. Photo or scanned image
-    const hasPhoto   = !!(photoFile || photoBase64 || previewUrl)
+    const hasPhoto   = !!(photoFile || photoBase64 || photoPreviewUrl || scannedDocPhoto)
 
     if (!hasEnglish && !hasHindi && !hasPhoto) {
       toast.error(
@@ -111,6 +112,7 @@ export default function CustomerForm() {
       if (customId.trim()) fd.append('custom_customer_id', customId.trim())
       if (photoFile) fd.append('photo', photoFile)
       else if (photoBase64) fd.append('photo_base64', photoBase64)
+      if (scannedDocPhoto) fd.append('document_photo_base64', scannedDocPhoto)
 
       if (isEdit) {
         await updateCustomer(id, fd)
@@ -145,19 +147,11 @@ export default function CustomerForm() {
       village_hi:       fields.village_hi       || f.village_hi,
     }))
 
-    // ── Save scanned photo as customer profile photo too ──────────────────
     if (fields._scannedPhotoUrl) {
       setScannedDocPhoto(fields._scannedPhotoUrl)
-      // Also use it as the customer's profile photo (shown in customer detail)
-      if (!previewUrl) {
-        // Only set if no photo was already chosen
-        setPhotoBase64(fields._scannedPhotoUrl)
-        setPhotoFile(null)
-        setPreviewUrl(fields._scannedPhotoUrl)
-      }
     }
 
-    toast.success('Fields filled! Scanned photo saved as customer photo too.')
+    toast.success('Fields filled! Scanned document saved separately.')
   }
 
   if (loading) {
@@ -189,8 +183,8 @@ export default function CustomerForm() {
           <div className="flex items-center gap-6 flex-wrap">
             {/* Preview */}
             <div className="w-28 h-28 rounded-2xl border-4 border-primary-100 overflow-hidden bg-gray-50 flex items-center justify-center shadow-inner">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              {photoPreviewUrl ? (
+                <img src={photoPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
               ) : (
                 <FiUser size={40} className="text-gray-300" />
               )}
@@ -211,10 +205,10 @@ export default function CustomerForm() {
                 <FiUpload /> Upload File | <span className="hindi-text">फ़ाइल अपलोड</span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-              {previewUrl && (
+              {photoPreviewUrl && (
                 <button
                   type="button"
-                  onClick={() => { setPreviewUrl(null); setPhotoFile(null); setPhotoBase64(null) }}
+                  onClick={() => { setPhotoPreviewUrl(null); setPhotoFile(null); setPhotoBase64(null) }}
                   className="text-xs text-red-500 hover:text-red-700 underline"
                 >
                   Remove photo
@@ -254,8 +248,8 @@ export default function CustomerForm() {
                     {form.first_name_hi.trim() && form.last_name_hi.trim() ? '✓' : '○'} <span className="hindi-text">हिंदी नाम</span>
                   </span>
                   <span className="text-blue-400 font-bold self-center">OR</span>
-                  <span className={`px-2 py-1 rounded-lg font-semibold border ${previewUrl ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-blue-200 text-blue-600'}`}>
-                    {previewUrl ? '✓' : '○'} Photo / Scan
+                  <span className={`px-2 py-1 rounded-lg font-semibold border ${photoPreviewUrl ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-blue-200 text-blue-600'}`}>
+                    {photoPreviewUrl ? '✓' : '○'} Photo / Scan
                   </span>
                 </div>
                 <p className="hindi-text text-blue-600 mt-1.5">
@@ -411,13 +405,13 @@ export default function CustomerForm() {
                   <span className="hindi-text font-normal text-gray-400">| स्कैन किया दस्तावेज़</span>
                 </div>
                 <div className="flex gap-2">
-                  {previewUrl !== scannedDocPhoto && (
+                      {photoPreviewUrl !== scannedDocPhoto && (
                     <button
                       type="button"
                       onClick={() => {
                         setPhotoBase64(scannedDocPhoto)
                         setPhotoFile(null)
-                        setPreviewUrl(scannedDocPhoto)
+                        setPhotoPreviewUrl(scannedDocPhoto)
                         toast.success('Set as profile photo!')
                       }}
                       className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-200 transition font-medium"
@@ -425,7 +419,7 @@ export default function CustomerForm() {
                       📌 Use as Profile Photo
                     </button>
                   )}
-                  {previewUrl === scannedDocPhoto && (
+                  {photoPreviewUrl === scannedDocPhoto && (
                     <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg font-medium">
                       ✓ Set as Profile Photo
                     </span>

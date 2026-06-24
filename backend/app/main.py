@@ -18,6 +18,10 @@ from sqlalchemy import text
 with engine.connect() as conn:
     try:
         conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS interest_override FLOAT"))
+        conn.execute(text("ALTER TABLE customers ADD COLUMN IF NOT EXISTS scanned_document_path VARCHAR(300)"))
+        conn.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS collateral_metal_type VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS collateral_metal_weight FLOAT"))
+        conn.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS collateral_photo_path VARCHAR(300)"))
         conn.commit()
     except Exception:
         pass

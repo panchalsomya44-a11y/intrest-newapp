@@ -17,6 +17,9 @@ export default function NewLoan() {
   const [form, setForm] = useState({
     collateral_description: '',
     collateral_description_hi: '',
+    collateral_metal_type: 'gold',
+    collateral_metal_weight: '',
+    collateral_photo: null,
     interest_rate: 3,
     notes: '',
     first_tranche_amount: '',
@@ -55,16 +58,19 @@ export default function NewLoan() {
     }
     setSaving(true)
     try {
-      const payload = {
-        customer_id: selectedCustomer.id,
-        collateral_description: form.collateral_description || null,
-        collateral_description_hi: form.collateral_description_hi || null,
-        interest_rate: parseFloat(form.interest_rate),
-        notes: form.notes || null,
-        first_tranche_amount: parseFloat(form.first_tranche_amount),
-        first_tranche_date: form.first_tranche_date ? new Date(form.first_tranche_date).toISOString() : null,
-      }
-      const res = await createLoan(payload)
+      const fd = new FormData()
+      fd.append('customer_id', selectedCustomer.id)
+      if (form.collateral_description) fd.append('collateral_description', form.collateral_description)
+      if (form.collateral_description_hi) fd.append('collateral_description_hi', form.collateral_description_hi)
+      if (form.collateral_metal_type) fd.append('collateral_metal_type', form.collateral_metal_type)
+      if (form.collateral_metal_weight) fd.append('collateral_metal_weight', form.collateral_metal_weight)
+      if (form.collateral_photo) fd.append('collateral_photo', form.collateral_photo)
+      if (form.interest_rate) fd.append('interest_rate', form.interest_rate)
+      if (form.notes) fd.append('notes', form.notes)
+      fd.append('first_tranche_amount', form.first_tranche_amount)
+      if (form.first_tranche_date) fd.append('first_tranche_date', new Date(form.first_tranche_date).toISOString())
+
+      const res = await createLoan(fd)
       toast.success(`Loan created! ${res.data.loan_number}`)
       navigate(`/loans/${res.data.id}`)
     } catch (err) {
@@ -185,6 +191,39 @@ export default function NewLoan() {
           <div>
             <label className="label">Collateral | <span className="hindi-text font-normal">जमानत</span></label>
             <input className="input-field" value={form.collateral_description} onChange={e => set('collateral_description', e.target.value)} placeholder="e.g., Gold ring, Property papers, etc." />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Metal Type | <span className="hindi-text font-normal">धातु</span></label>
+              <select className="input-field" value={form.collateral_metal_type} onChange={e => set('collateral_metal_type', e.target.value)}>
+                <option value="gold">Gold</option>
+                <option value="silver">Silver</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Weight (grams) | <span className="hindi-text font-normal">वजन (ग्राम)</span></label>
+              <input
+                className="input-field"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.collateral_metal_weight}
+                onChange={e => set('collateral_metal_weight', e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="label">Collateral Photo | <span className="hindi-text font-normal">जमानत फोटो</span></label>
+            <input
+              className="input-field"
+              type="file"
+              accept="image/*"
+              onChange={e => set('collateral_photo', e.target.files?.[0] || null)}
+            />
+            {form.collateral_photo && (
+              <p className="text-sm text-gray-500 mt-2">Selected: {form.collateral_photo.name}</p>
+            )}
           </div>
           <div>
             <label className="hindi-text label">जमानत (हिंदी में)</label>

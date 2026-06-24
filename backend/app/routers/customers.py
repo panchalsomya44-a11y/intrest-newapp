@@ -42,6 +42,8 @@ async def create_customer(
     address_hi: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None),
     photo_base64: Optional[str] = Form(None),   # webcam snapshot
+    document_photo: Optional[UploadFile] = File(None),
+    document_photo_base64: Optional[str] = Form(None),
     custom_customer_id: Optional[str] = Form(None),  # user-provided ID
     db: Session = Depends(get_db),
 ):
@@ -56,6 +58,7 @@ async def create_customer(
         cid = "CUST-" + str(uuid.uuid4())[:8].upper()
 
     photo_path = None
+    scanned_document_path = None
     if photo and photo.filename:
         ext = photo.filename.rsplit(".", 1)[-1] if "." in photo.filename else "jpg"
         photo_path = save_photo(await photo.read(), ext)
@@ -64,6 +67,14 @@ async def create_customer(
         if "," in photo_base64:
             photo_base64 = photo_base64.split(",", 1)[1]
         photo_path = save_photo(base64.b64decode(photo_base64), "jpg")
+
+    if document_photo and document_photo.filename:
+        ext = document_photo.filename.rsplit(".", 1)[-1] if "." in document_photo.filename else "jpg"
+        scanned_document_path = save_photo(await document_photo.read(), ext)
+    elif document_photo_base64:
+        if "," in document_photo_base64:
+            document_photo_base64 = document_photo_base64.split(",", 1)[1]
+        scanned_document_path = save_photo(base64.b64decode(document_photo_base64), "jpg")
 
     customer = Customer(
         customer_id=cid,
@@ -83,6 +94,7 @@ async def create_customer(
         village_hi=village_hi,
         address_hi=address_hi,
         photo_path=photo_path,
+        scanned_document_path=scanned_document_path,
     )
     db.add(customer)
     db.commit()
@@ -155,6 +167,8 @@ async def update_customer(
     address_hi: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None),
     photo_base64: Optional[str] = Form(None),
+    document_photo: Optional[UploadFile] = File(None),
+    document_photo_base64: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     c = db.query(Customer).filter(Customer.id == customer_id).first()
@@ -177,6 +191,14 @@ async def update_customer(
         if "," in photo_base64:
             photo_base64 = photo_base64.split(",", 1)[1]
         c.photo_path = save_photo(base64.b64decode(photo_base64), "jpg")
+
+    if document_photo and document_photo.filename:
+        ext = document_photo.filename.rsplit(".", 1)[-1] if "." in document_photo.filename else "jpg"
+        c.scanned_document_path = save_photo(await document_photo.read(), ext)
+    elif document_photo_base64:
+        if "," in document_photo_base64:
+            document_photo_base64 = document_photo_base64.split(",", 1)[1]
+        c.scanned_document_path = save_photo(base64.b64decode(document_photo_base64), "jpg")
     db.commit()
     db.refresh(c)
     return c
