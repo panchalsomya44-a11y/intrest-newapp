@@ -142,6 +142,8 @@ def add_payment(loan_id: int, data: PaymentCreate, db: Session = Depends(get_db)
     loan = db.query(Loan).filter(Loan.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    if not loan.is_active:
+        raise HTTPException(status_code=400, detail="Loan is closed")
 
     payment_date = data.payment_date or datetime.now(timezone.utc)
     payment = Payment(

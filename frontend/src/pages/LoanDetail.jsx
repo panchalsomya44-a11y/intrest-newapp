@@ -574,41 +574,56 @@ export default function LoanDetail() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loan.payments.map((p, i) => (
-                  <React.Fragment key={p.id || i}>
-                    <tr className="hover:bg-emerald-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.payment_date)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{formatCurrency(p.amount)}</td>
-                      <td className="px-4 py-3 text-sm">
-                        {p.interest_override === null || p.interest_override === undefined ? (
-                          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Auto</span>
-                        ) : p.interest_override === 0 ? (
-                          <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">Interest Waived</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium">
-                            Custom ₹{p.interest_override}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{p.notes || '—'}</td>
-                    </tr>
-                    {p.notes && p.notes.includes('Collateral sale proceeds') && (
-                      <tr>
-                        <td className="px-4 py-3" colSpan={4}>
-                          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                            <div className="font-semibold text-amber-800">Collateral sale recorded</div>
-                            <div className="text-sm text-gray-600 mt-2">{p.notes}</div>
-                            {loan.collateral_photo_path && (
-                              <div className="mt-3 rounded overflow-hidden border">
-                                <img src={photoUrl(loan.collateral_photo_path)} alt="Collateral sale" className="w-full h-40 object-cover" />
-                              </div>
-                            )}
-                          </div>
+                {loan.payments.map((p, i) => {
+                  const saleRefundMatch = p.notes?.match(/Customer received ₹([\d,]+(?:\.\d+)?)/)
+                  const refundAmount = saleRefundMatch ? parseFloat(saleRefundMatch[1].replace(/,/g, '')) : 0
+                  const isCollateralSale = p.notes && (p.notes.includes('Sale value') || p.notes.includes('Collateral sale proceeds'))
+                  const displayAmount = isCollateralSale ? Math.max(p.amount - refundAmount, 0) : p.amount
+
+                  return (
+                    <React.Fragment key={p.id || i}>
+                      <tr className="hover:bg-emerald-50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.payment_date)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{formatCurrency(displayAmount)}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {p.interest_override === null || p.interest_override === undefined ? (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Auto</span>
+                          ) : p.interest_override === 0 ? (
+                            <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">Interest Waived</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium">Custom ₹{p.interest_override}</span>
+                          )}
                         </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{p.notes || '—'}</td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
+                      {isCollateralSale && refundAmount > 0 && (
+                        <tr className="hover:bg-emerald-50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.payment_date)}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-red-600">{formatCurrency(refundAmount)}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">Refund</span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">Customer refund after collateral sale</td>
+                        </tr>
+                      )}
+                      {isCollateralSale && (
+                        <tr>
+                          <td className="px-4 py-3" colSpan={4}>
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                              <div className="font-semibold text-amber-800">Sale applied to loan</div>
+                              <div className="text-sm text-gray-600 mt-2">{p.notes}</div>
+                              {loan.collateral_photo_path && (
+                                <div className="mt-3 rounded overflow-hidden border">
+                                  <img src={photoUrl(loan.collateral_photo_path)} alt="Collateral sale" className="w-full h-40 object-cover" />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>

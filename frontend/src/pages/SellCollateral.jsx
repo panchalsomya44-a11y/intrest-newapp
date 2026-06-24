@@ -40,8 +40,13 @@ export default function SellCollateral() {
 
   const remainingAfterSale = loan ? Math.max((loan.outstanding || 0) - displayAmount, 0) : 0
   const customerRefund = loan ? Math.max(displayAmount - (loan.outstanding || 0), 0) : 0
+  const loanClosed = loan ? !loan.is_active : false
 
   const handleSell = () => {
+    if (!loan || loanClosed) {
+      toast.error('Loan is already closed. Cannot calculate sale value.')
+      return
+    }
     if (!weight || parseFloat(weight) <= 0) {
       toast.error('Enter a valid weight to calculate sell amount')
       return
@@ -51,6 +56,10 @@ export default function SellCollateral() {
   }
 
   const handleRecordSale = () => {
+    if (!loan || loanClosed) {
+      toast.error('Loan is already closed. Cannot record a collateral sale.')
+      return
+    }
     if (!weight || parseFloat(weight) <= 0) {
       toast.error('Enter a valid weight')
       return
@@ -155,6 +164,7 @@ export default function SellCollateral() {
                 className="input-field"
                 value={selectedMetal}
                 onChange={e => { setSelectedMetal(e.target.value); setWeight(''); setSellAmount(null) }}
+                disabled={loanClosed}
               >
                 <option value="gold">Gold</option>
                 <option value="silver">Silver</option>
@@ -170,6 +180,7 @@ export default function SellCollateral() {
                 value={weight}
                 onChange={e => { setWeight(e.target.value); setSellAmount(null) }}
                 placeholder="0"
+                disabled={loanClosed}
               />
               {loan.collateral_metal_weight != null && (
                 <div className="text-xs text-gray-500 mt-2">Loan weight: {loan.collateral_metal_weight.toFixed(0)} g</div>
@@ -184,6 +195,7 @@ export default function SellCollateral() {
                 step="0.01"
                 value={selectedMetal === 'gold' ? goldRate : silverRate}
                 onChange={e => selectedMetal === 'gold' ? setGoldRate(e.target.value) : setSilverRate(e.target.value)}
+                disabled={loanClosed}
               />
             </div>
           </div>
@@ -216,14 +228,16 @@ export default function SellCollateral() {
             <button
               type="button"
               onClick={handleSell}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-700 text-white font-semibold hover:bg-slate-800 active:bg-slate-900 transition shadow cursor-pointer"
+              disabled={loanClosed}
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl ${loanClosed ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-slate-700 text-white hover:bg-slate-800 active:bg-slate-900'} font-semibold transition shadow`}
             >
               Calculate Sale Value
             </button>
             <button
               type="button"
               onClick={handleRecordSale}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 text-white font-semibold hover:bg-amber-600 active:bg-amber-700 transition shadow cursor-pointer"
+              disabled={loanClosed}
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl ${loanClosed ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700'} font-semibold transition shadow`}
             >
               <FiShoppingBag size={18} /> Record Sale
             </button>

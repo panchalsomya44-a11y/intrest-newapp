@@ -50,9 +50,13 @@ export default function SellConfirmation() {
   const handleConfirm = async () => {
     setSaving(true)
     try {
+      const saleNotes = excessAmount > 0
+        ? `Sale value ₹${saleAmount.toFixed(2)} applied to interest ₹${interestToPay.toFixed(2)} + principal ₹${principalToPay.toFixed(2)}. Customer received ₹${excessAmount.toFixed(2)} after settlement.`
+        : `Sale value ₹${saleAmount.toFixed(2)} applied to interest ₹${interestToPay.toFixed(2)} + principal ₹${principalToPay.toFixed(2)}. Remaining outstanding ₹${remainingAfter.toFixed(2)}.`
+
       await addPayment(id, {
         amount: saleAmount,
-        notes: `Collateral sale proceeds for ${metal} ${weight_g} g @ ₹${rate_per_kg}/kg`,
+        notes: saleNotes,
       })
 
       // Refresh loan and decide where to navigate.
@@ -68,8 +72,8 @@ export default function SellConfirmation() {
           }
         }
         toast.success('Loan fully paid and closed after collateral sale.')
-        // Redirect to closed loans list for clarity.
-        navigate('/closed-loans')
+        // Redirect to closed loans list and replace history so back does not reopen sale confirmation.
+        navigate('/closed-loans', { replace: true })
       } else {
         toast.success('Sale applied to loan. Outstanding updated.')
         navigate(`/loans/${id}`)

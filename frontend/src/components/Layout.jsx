@@ -29,6 +29,13 @@ export default function Layout({ children }) {
   }
   const title = pageTitles[location.pathname] || 'Loan Manager'
 
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('loanManagerAuth')
+      window.location.href = '/login'
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100">
       {/* Sidebar */}
@@ -122,6 +129,12 @@ export default function Layout({ children }) {
               <span className="text-xs text-primary-600 font-medium">Default Rate:</span>
               <span className="text-xs font-bold text-primary-700">3% / month</span>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-xs font-semibold text-slate-500 bg-white/90 px-3 py-2 rounded-full border border-slate-200 hover:bg-white"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

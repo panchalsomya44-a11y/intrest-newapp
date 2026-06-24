@@ -16,6 +16,19 @@ export default function PaymentHistory() {
   const [filterTo,    setFilterTo]    = useState('')
   const [typeFilter,  setTypeFilter]  = useState('all')  // 'all' | 'payment' | 'disbursal'
 
+  const parseSalePayment = notes => {
+    if (!notes) return null
+    const saleMatch = notes.match(/Sale value ₹([\d,]+(?:\.\d+)?) applied to interest ₹([\d,]+(?:\.\d+)?) \+ principal ₹([\d,]+(?:\.\d+)?)(?:\. Customer received ₹([\d,]+(?:\.\d+)?) after settlement\.)?/) 
+    if (!saleMatch) return null
+
+    return {
+      saleAmount: parseFloat(saleMatch[1].replace(/,/g, '')),
+      interestAmount: parseFloat(saleMatch[2].replace(/,/g, '')),
+      principalAmount: parseFloat(saleMatch[3].replace(/,/g, '')),
+      refundAmount: saleMatch[4] ? parseFloat(saleMatch[4].replace(/,/g, '')) : 0,
+    }
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -30,21 +43,59 @@ export default function PaymentHistory() {
       lr.data.forEach(loan => {
         // ── Payments (paise jama / received) ──
         ;(loan.payments || []).forEach(p => {
-          flat.push({
-            kind:          'payment',
-            event_date:    p.payment_date,
-            amount:        p.amount,
-            id:            p.id,
-            loan_id:       loan.id,
-            loan_number:   loan.loan_number,
-            customer_id:   loan.customer_id,
-            collateral:    loan.collateral_description,
-        collateral_hi: loan.collateral_description_hi,
-            loan_active:   loan.is_active,
-            interest_rate: loan.interest_rate,
-            interest_override: p.interest_override,
-            notes:         p.notes,
-          })
+          const saleInfo = parseSalePayment(p.notes)
+          if (saleInfo) {
+            const appliedAmount = saleInfo.interestAmount + saleInfo.principalAmount
+            flat.push({
+              kind:          'payment',
+              event_date:    p.payment_date,
+              amount:        appliedAmount,
+              id:            `${p.id}-applied`,
+              loan_id:       loan.id,
+              loan_number:   loan.loan_number,
+              customer_id:   loan.customer_id,
+              collateral:    loan.collateral_description,
+              collateral_hi: loan.collateral_description_hi,
+              loan_active:   loan.is_active,
+              interest_rate: loan.interest_rate,
+              interest_override: p.interest_override,
+              notes:         `Sale proceeds applied to interest ₹${saleInfo.interestAmount.toFixed(2)} + principal ₹${saleInfo.principalAmount.toFixed(2)}`,
+            })
+
+            if (saleInfo.refundAmount > 0) {
+              flat.push({
+                kind:          'refund',
+                event_date:    p.payment_date,
+                amount:        saleInfo.refundAmount,
+                id:            `${p.id}-refund`,
+                loan_id:       loan.id,
+                loan_number:   loan.loan_number,
+                customer_id:   loan.customer_id,
+                collateral:    loan.collateral_description,
+                collateral_hi: loan.collateral_description_hi,
+                loan_active:   loan.is_active,
+                interest_rate: loan.interest_rate,
+                interest_override: null,
+                notes:         'Customer refund after collateral sale',
+              })
+            }
+          } else {
+            flat.push({
+              kind:          'payment',
+              event_date:    p.payment_date,
+              amount:        p.amount,
+              id:            p.id,
+              loan_id:       loan.id,
+              loan_number:   loan.loan_number,
+              customer_id:   loan.customer_id,
+              collateral:    loan.collateral_description,
+              collateral_hi: loan.collateral_description_hi,
+              loan_active:   loan.is_active,
+              interest_rate: loan.interest_rate,
+              interest_override: p.interest_override,
+              notes:         p.notes,
+            })
+          }
         })
 
         // ── Disbursals (paise diye / given out) ──
@@ -79,7 +130,8 @@ export default function PaymentHistory() {
   // ── Filter ────────────────────────────────────────────────────────────────
   const filtered = allEvents.filter(ev => {
     // type filter
-    if (typeFilter !== 'all' && ev.kind !== typeFilter) return false
+    if (typeFilter === 'disbursal' && ev.kind === 'payment') return false
+    if (typeFilter === 'payment' && ev.kind !== 'payment') return false
 
     // date range
     if (filterFrom && new Date(ev.event_date) < new Date(filterFrom)) return false
@@ -117,7 +169,7 @@ export default function PaymentHistory() {
   const groupedDates = Object.keys(grouped)
 
   // ── Totals ────────────────────────────────────────────────────────────────
-  const totalGiven    = filtered.filter(e => e.kind === 'disbursal').reduce((s, e) => s + e.amount, 0)
+  const totalGiven    = filtered.filter(e => e.kind === 'disbursal' || e.kind === 'refund').reduce((s, e) => s + e.amount, 0)
   const totalReceived = filtered.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0)
 
   // ── Print / PDF ───────────────────────────────────────────────────────────
@@ -131,7 +183,7 @@ export default function PaymentHistory() {
 
     const rows = groupedDates.map(day => {
       const evs = grouped[day]
-      const dayGiven    = evs.filter(e => e.kind === 'disbursal').reduce((s, e) => s + e.amount, 0)
+      const dayGiven    = evs.filter(e => e.kind === 'disbursal' || e.kind === 'refund').reduce((s, e) => s + e.amount, 0)
       const dayReceived = evs.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0)
 
       const rowsHtml = evs.map(ev => {
@@ -141,14 +193,16 @@ export default function PaymentHistory() {
         const custId = cust?.customer_id || ''
         const phone  = cust?.phone || ''
         const village = cust?.village || ''
-        const isD    = ev.kind === 'disbursal'
+        const isRefund = ev.kind === 'refund'
+        const isD    = ev.kind === 'disbursal' || isRefund
         const mode   = isD ? '—' :
           ev.interest_override === null || ev.interest_override === undefined ? 'Auto' :
           ev.interest_override === 0 ? 'Waived' : `Custom ₹${ev.interest_override}`
+        const typeLabel = isRefund ? '↺ Refund' : isD ? '↑ Given' : '↓ Received'
 
         return `<tr>
           <td>${new Date(ev.event_date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</td>
-          <td><span class="${isD ? 'badge-given' : 'badge-recd'}">${isD ? '↑ Given' : '↓ Received'}</span></td>
+          <td><span class="${isD ? 'badge-given' : 'badge-recd'}">${typeLabel}</span></td>
           <td><strong>${name}</strong>${nameHi ? `<br/><span class="hi">${nameHi}</span>` : ''}<br/><span class="mono">${custId}</span>${phone ? ` · ${phone}` : ''}${village ? ` · ${village}` : ''}</td>
           <td class="mono">${ev.loan_number}<br/><span class="sm">${ev.collateral || ''}${ev.collateral_hi ? `<br/><span class="hi">${ev.collateral_hi}</span>` : ''}</span></td>
           <td class="${isD ? 'amt-given' : 'amt-recd'}">${isD ? '+' : '−'}${formatCurrency(ev.amount)}</td>
@@ -395,28 +449,30 @@ export default function PaymentHistory() {
                 {/* ── Event rows ── */}
                 <div className="divide-y divide-gray-100">
                   {dayEvents.map((ev, i) => {
-                    const cust       = customers[ev.customer_id]
+                    const cust        = customers[ev.customer_id]
+                    const isRefund    = ev.kind === 'refund'
                     const isDisbursal = ev.kind === 'disbursal'
+                    const isOutflow   = isDisbursal || isRefund
 
                     return (
                       <div
                         key={ev.id || i}
                         onClick={() => navigate(`/loans/${ev.loan_id}`)}
                         className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors
-                          ${isDisbursal ? 'hover:bg-blue-50' : 'hover:bg-emerald-50'}`}
+                          ${isOutflow ? 'hover:bg-blue-50' : 'hover:bg-emerald-50'}`}
                       >
                         {/* Type icon */}
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
-                          ${isDisbursal ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                          {isDisbursal ? <GiReceiveMoney size={20} /> : <GiPayMoney size={20} />}
+                          ${isOutflow ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                          {isOutflow ? <GiReceiveMoney size={20} /> : <GiPayMoney size={20} />}
                         </div>
 
                         {/* Customer info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                              ${isDisbursal ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                              {isDisbursal ? '↑ Diya / Given' : '↓ Jama / Received'}
+                              ${isOutflow ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {isRefund ? '↺ Refund' : isDisbursal ? '↑ Diya / Given' : '↓ Jama / Received'}
                             </span>
                             <span className="font-mono text-xs text-primary-500 bg-primary-50 px-2 py-0.5 rounded-lg">
                               {ev.loan_number}
@@ -447,10 +503,10 @@ export default function PaymentHistory() {
 
                         {/* Amount + mode */}
                         <div className="text-right flex-shrink-0">
-                          <div className={`text-xl font-bold ${isDisbursal ? 'text-blue-600' : 'text-emerald-600'}`}>
-                            {isDisbursal ? '+' : '−'}{formatCurrency(ev.amount)}
+                          <div className={`text-xl font-bold ${isOutflow ? 'text-blue-600' : 'text-emerald-600'}`}>
+                            {isOutflow ? '+' : '−'}{formatCurrency(ev.amount)}
                           </div>
-                          {!isDisbursal && (
+                          {!isOutflow && (
                             <div className="mt-1">
                               {ev.interest_override === null || ev.interest_override === undefined ? (
                                 <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Auto</span>
