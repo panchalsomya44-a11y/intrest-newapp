@@ -10,6 +10,15 @@ pipeline {
             }
         }
 
+        stage('Show Workspace') {
+            steps {
+                sh '''
+                pwd
+                ls -la
+                '''
+            }
+        }
+
         stage('Stop Existing Containers') {
             steps {
                 sh 'docker-compose down || true'
@@ -35,6 +44,16 @@ pipeline {
                 docker-compose ps
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment Successful'
+        }
+
+        failure {
+            echo 'Deployment Failed'
         }
     }
 }
