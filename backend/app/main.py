@@ -40,9 +40,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve uploaded photos
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Serve uploaded photos (only if using local storage)
+if not settings.USE_CLOUD_STORAGE:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 app.include_router(customers.router)
 app.include_router(loans.router)

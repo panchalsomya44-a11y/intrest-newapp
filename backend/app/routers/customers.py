@@ -11,16 +11,26 @@ from ..database import get_db
 from ..models.customer import Customer
 from ..schemas.customer import CustomerCreate, CustomerOut, CustomerUpdate
 from ..config import settings
+from ..utils.gcs import upload_file_to_gcs, get_gcs_url
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
 
 def save_photo(data: bytes, ext: str = "jpg") -> str:
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    filename = f"{uuid.uuid4()}.{ext}"
-    path = os.path.join(settings.UPLOAD_DIR, filename)
-    with open(path, "wb") as f:
-        f.write(data)
-    return filename
+    """
+    Save photo to either local disk or Google Cloud Storage based on settings.
+    Returns the filename or GCS path.
+    """
+    if settings.USE_CLOUD_STORAGE:
+        filename = upload_file_to_gcs(data, ext)
+        return filename
+    else:
+        # Local storage (original behavior)
+        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+        filename = f"{uuid.uuid4()}.{ext}"
+        path = os.path.join(settings.UPLOAD_DIR, filename)
+        with open(path, "wb") as f:
+            f.write(data)
+        return filename
 
 
 @router.post("/", response_model=CustomerOut, status_code=201)

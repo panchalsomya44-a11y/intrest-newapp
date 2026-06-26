@@ -1,0 +1,51 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+env:
+  GCP_PROJECT_ID: project-dev-496407
+  REGION: us-central1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Build and push Docker image to Artifact Registry
+        run: |
+          gcloud builds submit backend \
+            --config=backend/cloudbuild.yaml \
+            --substitutions=_REGION=${{ env.REGION }},_SERVICE_NAME=loan-backend
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy loan-backend \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/loan-app/loan-backend:latest \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --set-env-vars="DATABASE_URL=${{ secrets.CLOUD_SQL_DATABASE_URL }},GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},USE_CLOUD_STORAGE=true,SECRET_KEY=${{ secrets.SECRET_KEY }}" \
+            --memory=2Gi \
+            --timeout=3600s \
+            --max-instances=10

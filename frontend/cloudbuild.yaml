@@ -1,0 +1,30 @@
+steps:
+  # Build Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/loan-app/loan-frontend:latest"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/loan-app/loan-frontend:${SHORT_SHA}"
+      - "."
+    dir: "frontend"
+
+  # Push to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/loan-app/loan-frontend:latest"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/loan-app/loan-frontend:${SHORT_SHA}"
+
+substitutions:
+  _REGION: "us-central1"
+  _SERVICE_NAME: "loan-frontend"
+
+options:
+  machineType: "N1_HIGHCPU_8"
+  logging: CLOUD_LOGGING_ONLY
